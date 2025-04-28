@@ -50,3 +50,7 @@ def require_role(role: str):
             raise HTTPException(status_code=403, detail="Operation not permitted")
         return current_user
     return role_checker
+
+def get_app():
+    from app.main import app
+    return app

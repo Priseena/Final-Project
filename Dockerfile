@@ -20,11 +20,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies in /.venv
-COPY requirements.txt .
+COPY requirements.txt /app/requirements.txt
 RUN python -m venv /.venv \
     && . /.venv/bin/activate \
     && pip install --upgrade pip \
-    && pip install -r requirements.txt
+    && pip install --no-cache-dir -r /app/requirements.txt 
+
 
 # Define a second stage for the runtime, using the same Debian Bookworm slim image
 FROM python:3.12-slim-bookworm AS final
@@ -41,7 +42,10 @@ COPY --from=base /.venv /.venv
 ENV PATH="/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONFAULTHANDLER=1 \
-    QR_CODE_DIR=/myapp/qr_codes
+    QR_CODE_DIR=/myapp/qr_codes \
+    PYTHONPATH=/myapp
+
+
 
 # Set the working directory
 WORKDIR /myapp

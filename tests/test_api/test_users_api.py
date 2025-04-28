@@ -8,28 +8,102 @@ from app.utils.nickname_gen import generate_nickname
 @pytest.mark.asyncio
 async def test_create_user_access_denied(async_client, user_token):
     headers = {"Authorization": f"Bearer {user_token}"}
-    user_data = {
-        "nickname": generate_nickname(),
-        "email": "test@example.com",
-        "password": "StrongPassword123!",
-    }
-    response = await async_client.post("/users/", json=user_data, headers=headers)
-    assert response.status_code == 403
+    # Test creating a user with missing fields
+    @pytest.mark.asyncio
+    async def test_create_user_missing_fields(async_client, admin_token):
+        headers = {"Authorization": f"Bearer {admin_token}"}
+        user_data = {
+            "email": "missingfields@example.com"
+            # Missing "password" and "nickname"
+        }
+        response = await async_client.post("/api/users/", json=user_data, headers=headers)
+        assert response.status_code == 422
+        assert "field required" in response.json().get("detail", [{}])[0].get("msg", "")
 
 
-# Test retrieving a user with access denied
-@pytest.mark.asyncio
-async def test_retrieve_user_access_denied(async_client, verified_user, user_token):
-    headers = {"Authorization": f"Bearer {user_token}"}
-    response = await async_client.get(f"/users/{verified_user.id}", headers=headers)
-    assert response.status_code == 403
+    # Test retrieving a non-existent user
+    @pytest.mark.asyncio
+    async def test_retrieve_non_existent_user(async_client, admin_token):
+        non_existent_user_id = "00000000-0000-0000-0000-000000000000"
+        headers = {"Authorization": f"Bearer {admin_token}"}
+        response = await async_client.get(f"/api/users/{non_existent_user_id}", headers=headers)
+        assert response.status_code == 404
+        assert "User not found" in response.json().get("detail", "")
 
 
-# Test retrieving a user with access allowed
-@pytest.mark.asyncio
-async def test_retrieve_user_access_allowed(async_client, admin_user, admin_token):
-    headers = {"Authorization": f"Bearer {admin_token}"}
-    response = await async_client.get(f"/users/{admin_user.id}", headers=headers)
+    # Test updating a user's role with access denied
+    @pytest.mark.asyncio
+    async def test_update_user_role_access_denied(async_client, verified_user, user_token):
+        updated_data = {"role": UserRole.ADMIN.name}
+        headers = {"Authorization": f"Bearer {user_token}"}
+        response = await async_client.put(f"/api/users/{verified_user.id}/role", json=updated_data, headers=headers)
+        assert response.status_code == 403
+
+
+    # Test updating a user's role with access allowed
+    @pytest.mark.asyncio
+    async def test_update_user_role_access_allowed(async_client, admin_user, admin_token):
+        updated_data = {"role": UserRole.MANAGER.name}
+        headers = {"Authorization": f"Bearer {admin_token}"}
+        response = await async_client.put(f"/api/users/{admin_user.id}/role", json=updated_data, headers=headers)
+        assert response.status_code == 200
+        assert response.json()["role"] == updated_data["role"]
+
+
+    # Test creating a user with weak password
+    @pytest.mark.asyncio
+    async def test_create_user_weak_password(async_client, admin_token):
+        headers = {"Authorization": f"Bearer {admin_token}"}
+        user_data = {
+            "nickname": generate_nickname(),
+            "email": "weakpassword@example.com",
+            "password": "123",
+        }
+        response = await async_client.post("/api/users/", json=user_data, headers=headers)
+        assert response.status_code == 422
+        assert "Password too weak" in response.json().get("detail", [{}])[0].get("msg", "")
+
+
+    # Test login with missing credentials
+    @pytest.mark.asyncio
+    async def test_login_missing_credentials(async_client):
+        form_data = {
+            "username": "",
+            "password": "",
+        }
+        response = await async_client.post("/login/", data=urlencode(form_data), headers={"Content-Type": "application/x-www-form-urlencoded"})
+        assert response.status_code == 422
+        assert "field required" in response.json().get("detail", [{}])[0].get("msg", "")
+
+
+    # Test listing users with pagination
+    @pytest.mark.asyncio
+    async def test_list_users_with_pagination(async_client, admin_token):
+        headers = {"Authorization": f"Bearer {admin_token}"}
+        response = await async_client.get("/api/users/?page=1&size=10", headers=headers)
+        assert response.status_code == 200
+        assert "items" in response.json()
+        assert "total" in response.json()
+
+
+    # Test retrieving the current user's profile
+    @pytest.mark.asyncio
+    async def test_retrieve_current_user_profile(async_client, verified_user, user_token):
+        headers = {"Authorization": f"Bearer {user_token}"}
+        response = await async_client.get("/api/users/me", headers=headers)
+        assert response.status_code == 200
+        assert response.json()["id"] == str(verified_user.id)
+
+
+    # Test updating the current user's profile
+    @pytest.mark.asyncio
+    async def test_update_current_user_profile(async_client, verified_user, user_token):
+        updated_data = {"nickname": "UpdatedNickname"}
+        headers = {"Authorization": f"Bearer {user_token}"}
+        response = await async_client.put("/api/users/me", json=updated_data, headers=headers)
+        assert response.status_code == 200
+        assert response.json()["nickname"] == updated_data["nickname"]
+    response = await async_client.get(f"/api/users/{admin_user.id}", headers=headers)
     assert response.status_code == 200
     assert response.json()["id"] == str(admin_user.id)
 
@@ -39,7 +113,7 @@ async def test_retrieve_user_access_allowed(async_client, admin_user, admin_toke
 async def test_update_user_email_access_denied(async_client, verified_user, user_token):
     updated_data = {"email": f"updated_{verified_user.id}@example.com"}
     headers = {"Authorization": f"Bearer {user_token}"}
-    response = await async_client.put(f"/users/{verified_user.id}", json=updated_data, headers=headers)
+    response = await async_client.put(f"/api/users/{verified_user.id}", json=updated_data, headers=headers)
     assert response.status_code == 403
 
 
@@ -48,7 +122,7 @@ async def test_update_user_email_access_denied(async_client, verified_user, user
 async def test_update_user_email_access_allowed(async_client, admin_user, admin_token):
     updated_data = {"email": f"updated_{admin_user.id}@example.com"}
     headers = {"Authorization": f"Bearer {admin_token}"}
-    response = await async_client.put(f"/users/{admin_user.id}", json=updated_data, headers=headers)
+    response = await async_client.put(f"/api/users/{admin_user.id}", json=updated_data, headers=headers)
     assert response.status_code == 200
     assert response.json()["email"] == updated_data["email"]
 
@@ -57,11 +131,11 @@ async def test_update_user_email_access_allowed(async_client, admin_user, admin_
 @pytest.mark.asyncio
 async def test_delete_user(async_client, admin_user, admin_token):
     headers = {"Authorization": f"Bearer {admin_token}"}
-    delete_response = await async_client.delete(f"/users/{admin_user.id}", headers=headers)
+    delete_response = await async_client.delete(f"/api/users/{admin_user.id}", headers=headers)
     assert delete_response.status_code == 204
 
     # Verify the user is deleted
-    fetch_response = await async_client.get(f"/users/{admin_user.id}", headers=headers)
+    fetch_response = await async_client.get(f"/api/users/{admin_user.id}", headers=headers)
     assert fetch_response.status_code == 404
 
 
@@ -160,7 +234,7 @@ async def test_login_locked_user(async_client, locked_user):
 async def test_delete_user_does_not_exist(async_client, admin_token):
     non_existent_user_id = "00000000-0000-0000-0000-000000000000"
     headers = {"Authorization": f"Bearer {admin_token}"}
-    delete_response = await async_client.delete(f"/users/{non_existent_user_id}", headers=headers)
+    delete_response = await async_client.delete(f"/api/users/{non_existent_user_id}", headers=headers)
     assert delete_response.status_code == 404
 
 
@@ -169,7 +243,7 @@ async def test_delete_user_does_not_exist(async_client, admin_token):
 async def test_update_user_github(async_client, admin_user, admin_token):
     updated_data = {"github_profile_url": "http://www.github.com/example"}
     headers = {"Authorization": f"Bearer {admin_token}"}
-    response = await async_client.put(f"/users/{admin_user.id}", json=updated_data, headers=headers)
+    response = await async_client.put(f"/api/users/{admin_user.id}", json=updated_data, headers=headers)
     assert response.status_code == 200
     assert response.json()["github_profile_url"] == updated_data["github_profile_url"]
 
@@ -179,7 +253,7 @@ async def test_update_user_github(async_client, admin_user, admin_token):
 async def test_update_user_linkedin(async_client, admin_user, admin_token):
     updated_data = {"linkedin_profile_url": "http://www.linkedin.com/in/example"}
     headers = {"Authorization": f"Bearer {admin_token}"}
-    response = await async_client.put(f"/users/{admin_user.id}", json=updated_data, headers=headers)
+    response = await async_client.put(f"/api/users/{admin_user.id}", json=updated_data, headers=headers)
     assert response.status_code == 200
     assert response.json()["linkedin_profile_url"] == updated_data["linkedin_profile_url"]
 
@@ -187,7 +261,7 @@ async def test_update_user_linkedin(async_client, admin_user, admin_token):
 # Test listing users as an admin
 @pytest.mark.asyncio
 async def test_list_users_as_admin(async_client, admin_token):
-    response = await async_client.get("/users/", headers={"Authorization": f"Bearer {admin_token}"})
+    response = await async_client.get("/api/users/", headers={"Authorization": f"Bearer {admin_token}"})
     assert response.status_code == 200
     assert "items" in response.json()
 
@@ -197,7 +271,7 @@ async def test_list_users_as_admin(async_client, admin_token):
 async def test_list_users_as_manager(async_client, manager_token):
     # Ensure async_client is properly passed as a fixture
     headers = {"Authorization": f"Bearer {manager_token}"}
-    response = await async_client.get("/users/", headers=headers)
+    response = await async_client.get("/api/users/", headers=headers)
     
     # Assert expected status code and behavior
     assert response.status_code == 200
@@ -207,5 +281,5 @@ async def test_list_users_as_manager(async_client, manager_token):
 # Test listing users as an unauthorized user
 @pytest.mark.asyncio
 async def test_list_users_unauthorized(async_client, user_token):
-    response = await async_client.get("/users/", headers={"Authorization": f"Bearer {user_token}"})
+    response = await async_client.get("/api/users/", headers={"Authorization": f"Bearer {user_token}"})
     assert response.status_code == 403

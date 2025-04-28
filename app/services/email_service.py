@@ -4,6 +4,7 @@ from settings.config import settings
 from app.utils.smtp_connection import SMTPClient
 from app.utils.template_manager import TemplateManager
 from app.models.user_model import User
+from app.services.email_service import EmailService
 
 class EmailService:
     def __init__(self, template_manager: TemplateManager):

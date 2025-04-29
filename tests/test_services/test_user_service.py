@@ -7,7 +7,7 @@ from app.utils.nickname_gen import generate_nickname
 pytestmark = pytest.mark.asyncio
 
 # Test creating a user with invalid data
-async def test_create_user_with_invalid_data(db_session):
+async def test_create_user_with_invalid_data(db_session, email_service):
     # Test with invalid email
     invalid_user_data = {
         "nickname": "testuser",
@@ -15,7 +15,7 @@ async def test_create_user_with_invalid_data(db_session):
         "password": "ValidPassword123!",
     }
     with pytest.raises(ValueError, match="Invalid email address"):
-        await UserService.create(db_session, invalid_user_data)
+        await UserService.create(db_session, invalid_user_data, email_service)
 
     # Test with short password
     invalid_user_data = {
@@ -24,7 +24,7 @@ async def test_create_user_with_invalid_data(db_session):
         "password": "short",  # Invalid password
     }
     with pytest.raises(ValueError, match="Password must be at least 8 characters long"):
-        await UserService.create(db_session, invalid_user_data)
+        await UserService.create(db_session, invalid_user_data, email_service)
 
     # Test with short nickname
     invalid_user_data = {
@@ -33,7 +33,7 @@ async def test_create_user_with_invalid_data(db_session):
         "password": "ValidPassword123!",
     }
     with pytest.raises(ValueError, match="Nickname must be at least 3 characters long"):
-        await UserService.create(db_session, invalid_user_data)
+        await UserService.create(db_session, invalid_user_data, email_service)
 
 # Test fetching a user by ID when the user exists
 async def test_get_by_id_user_exists(db_session, user):

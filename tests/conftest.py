@@ -56,14 +56,21 @@ def email_service():
 
 
 # this is what creates the http client for your api tests
+
 @pytest.fixture(scope="function")
 async def async_client(db_session):
-    async with AsyncClient(app=app, base_url="http://testserver") as client:
-        app.dependency_overrides[get_db] = lambda: db_session
-        try:
-            yield client
-        finally:
-            app.dependency_overrides.clear()
+    """
+    Provide an HTTP client for API tests with dependency overrides.
+    """
+    # Override the `get_db` dependency to use the test database session
+    app.dependency_overrides[get_db] = lambda: db_session
+
+    # Use AsyncClient without the `app` argument
+    async with AsyncClient(base_url="http://127.0.0.1:8000") as client:
+        yield client
+
+    # Clear dependency overrides after the test
+    app.dependency_overrides.clear()
 
 @pytest.fixture(scope="session", autouse=True)
 def initialize_database():
@@ -228,14 +235,14 @@ def user_token(user):
     token_data = {"sub": str(user.id), "role": user.role.name}
     return create_access_token(data=token_data, expires_delta=timedelta(minutes=30))
 
+
+
 @pytest.fixture
 def email_service():
-    if settings.send_real_mail == 'true':
-        # Return the real email service when specifically testing email functionality
-        return EmailService()
-    else:
-        # Otherwise, use a mock to prevent actual email sending
-        mock_service = AsyncMock(spec=EmailService)
-        mock_service.send_verification_email.return_value = None
-        mock_service.send_user_email.return_value = None
-        return mock_service
+    """
+    Provide a mocked email service for testing.
+    """
+    mock_service = AsyncMock(spec=EmailService)
+    mock_service.send_verification_email.return_value = None
+    mock_service.send_user_email.return_value = None
+    return mock_service

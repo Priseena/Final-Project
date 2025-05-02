@@ -52,11 +52,21 @@ jobs:
           echo "Waiting for Postgres..."
           sleep 5
           done
+      - name: Start Docker Compose services
+        run: docker-compose up -d
+      - name: Wait for FastAPI to be ready
+        run: |
+            for i in {1..10}; do
+              curl -f http://localhost:8000/health && break
+              echo "Waiting for FastAPI..."
+              sleep 5
+            done
           
       - name: Run tests with pytest
         env:
           DATABASE_URL: postgresql+asyncpg://user:password@postgres:5432/myappdb  # Configure the DATABASE_URL environment variable for tests
         run: docker compose exec fastapi pytest
+      
 
   build-and-push-docker:
     needs: test

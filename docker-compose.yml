@@ -9,9 +9,9 @@ services:
       POSTGRES_PASSWORD: password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d myappdb"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: 15s
+      timeout: 10s
+      retries: 10
     networks:
       - app-network
 
@@ -39,6 +39,7 @@ services:
         condition: service_healthy
     networks:
       - app-network
+ 
 
   nginx:
     image: nginx:latest

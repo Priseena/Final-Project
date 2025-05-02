@@ -80,15 +80,15 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: pr522/final_project_fastapi-1:${{ github.sha }} # Uses the Git SHA for tagging
+          tags: pr522/fastapi-1:${{ github.sha }} # Uses the Git SHA for tagging
           platforms: linux/amd64,linux/arm64 # Multi-platform support
-          cache-from: type=registry,ref=pr522/final_project_fastapi-1:cache
+          cache-from: type=registry,ref=pr522/fastapi-1:cache
           cache-to: type=inline,mode=max
           
       - name: Scan the Docker image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'pr522/final_project_fastapi-1:${{ github.sha }}'
+          image-ref: 'pr522/fastapi-1:${{ github.sha }}'
           format: 'table'
           exit-code: '1' # Fail the job if vulnerabilities are found
           ignore-unfixed: true

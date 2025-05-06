@@ -21,7 +21,7 @@ Key Highlights:
 from builtins import dict, int, len, str
 from datetime import timedelta
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Response, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Response, status, Request,UploadFile, File
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_current_user, get_db, get_email_service, require_role
@@ -33,9 +33,29 @@ from app.services.jwt_service import create_access_token
 from app.utils.link_generation import create_user_links, generate_pagination_links
 from app.dependencies import get_settings
 from app.services.email_service import EmailService
+from app.services.minio_client import upload_profile_picture
+from sqlalchemy.orm import Session
+
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 settings = get_settings()
+
+@router.post("/users/{user_id}/upload-profile-pic")
+async def upload_profile_pic(user_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    # Validate user exists
+    user = db.query("User").filter("User.id == user_id").first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Upload to MinIO
+    image_url = upload_profile_picture(file, f"user_{user_id}_{file.filename}")
+
+    # Save to DB
+    user.profile_picture_url = image_url
+    db.commit()
+    db.refresh(user)
+    return {"image_url": image_url}
+
 @router.get("/api/users/{user_id}", response_model=UserResponse, name="get_user", tags=["User Management Requires (Admin or Manager Roles)"])
 async def get_user(user_id: UUID, request: Request, db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme), current_user: dict = Depends(require_role(["ADMIN", "MANAGER"]))):
     """

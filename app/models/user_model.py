@@ -15,6 +15,7 @@ class UserRole(Enum):
     AUTHENTICATED = "AUTHENTICATED"
     MANAGER = "MANAGER"
     ADMIN = "ADMIN"
+    USER = "USER"
 
 class User(Base):
     """
@@ -54,7 +55,7 @@ class User(Base):
     __mapper_args__ = {"eager_defaults": True}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    nickname: Mapped[str] = Column(String(50), unique=True, nullable=False, index=True)
+    nickname: Mapped[str] = Column(String(50), unique=True, nullable=True, index=True)
     email: Mapped[str] = Column(String(255), unique=True, nullable=False, index=True)
     first_name: Mapped[str] = Column(String(100), nullable=True)
     last_name: Mapped[str] = Column(String(100), nullable=True)
@@ -73,7 +74,7 @@ class User(Base):
     verification_token = Column(String, nullable=True)
     email_verified: Mapped[bool] = Column(Boolean, default=False, nullable=False)
     hashed_password: Mapped[str] = Column(String(255), nullable=False)
-
+    is_verified = Column(Boolean, default=False)  # Add this column
 
     def __repr__(self) -> str:
         """Provides a readable representation of a user object."""

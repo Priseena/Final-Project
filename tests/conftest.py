@@ -44,7 +44,7 @@ TEST_DATABASE_URL = settings.database_url.replace("postgresql://", "postgresql+a
 engine = create_async_engine(TEST_DATABASE_URL, echo=settings.debug)
 AsyncTestingSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 AsyncSessionScoped = scoped_session(AsyncTestingSessionLocal)
-
+DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 @pytest.fixture
 def email_service():
@@ -246,3 +246,28 @@ def email_service():
     mock_service.send_verification_email.return_value = None
     mock_service.send_user_email.return_value = None
     return mock_service
+
+@pytest.fixture
+async def test_user(db_session):
+    """
+    Fixture to create a test user and return both user object and JWT token.
+    """
+    user = User(
+        email="testuser@example.com",
+        hashed_password=hash_password("MySuperPassword$1234"),
+        first_name="Test",
+        last_name="User",
+        role=UserRole.AUTHENTICATED,
+        nickname="testuser",
+        email_verified=True,  # assuming this should be email_verified
+        is_locked=False
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    token_data = {"sub": str(user.id), "role": user.role.name}
+    token = create_access_token(data=token_data, expires_delta=timedelta(minutes=30))
+
+    # Return both user and token
+    return {"user": user, "token": token}

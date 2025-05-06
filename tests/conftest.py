@@ -66,7 +66,7 @@ async def async_client(db_session):
     app.dependency_overrides[get_db] = lambda: db_session
 
     # Use AsyncClient without the `app` argument
-    async with AsyncClient(base_url="http://127.0.0.1:8000") as client:
+    async with AsyncClient(base_url="http://fastapi:8000") as client:
         yield client
 
     # Clear dependency overrides after the test

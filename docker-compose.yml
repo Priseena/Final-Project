@@ -1,5 +1,3 @@
-
-
 services:
   postgres:
     image: postgres:16.2
@@ -53,6 +51,21 @@ services:
 
     depends_on:
       - fastapi
+    networks:
+      - app-network
+
+  test:
+    build: .
+    entrypoint: ["pytest"]  # Use pytest as the entrypoint
+    command: ["tests/"]     # Specify the directory or file to test
+    volumes:
+      - ./:/myapp/
+    depends_on:
+      - postgres
+      - fastapi
+    environment:
+      PYTHONPATH: /myapp
+      DATABASE_URL: postgresql+asyncpg://user:password@postgres:5432/myappdb
     networks:
       - app-network
 

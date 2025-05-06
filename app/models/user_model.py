@@ -73,7 +73,7 @@ class User(Base):
     verification_token = Column(String, nullable=True)
     email_verified: Mapped[bool] = Column(Boolean, default=False, nullable=False)
     hashed_password: Mapped[str] = Column(String(255), nullable=False)
-
+    is_verified = Column(Boolean, default=False)  # Add this field if it is missing
 
     def __repr__(self) -> str:
         """Provides a readable representation of a user object."""

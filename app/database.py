@@ -24,3 +24,8 @@ class Database:
         if cls._session_factory is None:
             raise ValueError("Database not initialized. Call `initialize()` first.")
         return cls._session_factory
+   
+
+DATABASE_URL = "postgresql+asyncpg://postgres:yourpassword@localhost/myappdb"
+engine = create_async_engine(DATABASE_URL, echo=True)
+SessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)

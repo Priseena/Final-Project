@@ -33,6 +33,7 @@ from app.services.jwt_service import create_access_token
 from app.utils.link_generation import create_user_links, generate_pagination_links
 from app.dependencies import get_settings
 from app.services.email_service import EmailService
+from app.models.user_model import UserRole  # Correct import
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 settings = get_settings()
@@ -245,3 +246,11 @@ async def verify_email(user_id: UUID, token: str, db: AsyncSession = Depends(get
     if await UserService.verify_email_with_token(db, user_id, token):
         return {"message": "Email verified successfully"}
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification token")
+
+@router.post("/users/request-pro-status", status_code=status.HTTP_202_ACCEPTED)
+async def request_pro_status(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.AUTHENTICATED:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only authenticated users can request pro status")
+
+    # Simulate saving the request to the database
+    return {"message": "Pro status request submitted successfully"}

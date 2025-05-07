@@ -10,6 +10,8 @@ class TemplateManager:
     def _read_template(self, filename: str) -> str:
         """Private method to read template content."""
         template_path = self.templates_dir / filename
+        if not template_path.exists():
+         raise FileNotFoundError(f"Template file '{filename}' not found in '{self.templates_dir}'")
         with open(template_path, 'r', encoding='utf-8') as file:
             return file.read()
 
